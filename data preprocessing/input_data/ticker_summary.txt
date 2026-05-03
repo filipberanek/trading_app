@@ -1,0 +1,30 @@
+Common start date : 2017-03-23
+Effective coverage: 9.1 years
+
+DOWNLOADED (16):
+  IUIT   9.1y  iShares S&P 500 IT Sector UCITS
+  IUHC   9.1y  iShares S&P 500 Health Care UCITS
+  IUES   9.1y  iShares S&P 500 Energy UCITS
+  IUCD   9.1y  iShares S&P 500 Consumer Discret. UCITS
+  IUCS   9.1y  iShares S&P 500 Consumer Staples UCITS
+  IJPA   9.1y  iShares Core MSCI Japan UCITS
+  IEEM   9.1y  iShares Core MSCI EM UCITS
+  IBZL   9.1y  iShares MSCI Brazil UCITS
+  SMEA   9.1y  iShares Core MSCI Europe UCITS
+  EEA    9.1y  iShares MSCI Eastern Europe Capped
+  SXR8   9.1y  iShares Core S&P 500 UCITS (Acc)
+  EQQQ   9.1y  Invesco NASDAQ-100 UCITS
+  IGLN   9.1y  iShares Physical Gold ETC
+  IDTL   9.1y  iShares $ Treasury Bond 20+yr UCITS
+  SEGA   9.1y  SPDR Bloomberg Euro Aggregate Bond
+  DBZB   9.1y  Xtrackers II EUR Govt Bond UCITS
+
+SKIPPED (8):
+  IUHF   iShares S&P 500 Financials Sector UCITS
+  IUIN   iShares S&P 500 Industrials UCITS
+  IUUT   iShares S&P 500 Utilities UCITS
+  IUMB   iShares S&P 500 Materials UCITS
+  CEEM   iShares MSCI China UCITS
+  EWG2   iShares MSCI Germany UCITS
+  VWCE   Vanguard FTSE All-World UCITS
+  IBTM   iShares $ Treasury Bond 7-10yr UCITS

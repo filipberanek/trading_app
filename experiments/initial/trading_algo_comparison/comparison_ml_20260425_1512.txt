@@ -1,0 +1,33 @@
+Strategy comparison (walk-forward) — EQQQ
+Generated  : 2026-04-25 15:12
+Train      : 2017-03-23 – 2023-03-22  (1525 trading days)
+Test       : 2023-03-23 – 2026-04-24  (780 trading days)
+Rotation   : EQQQ, IUES, IGLN, IDTL, IBZL, EEA, IUCS, SEGA
+
+--- Best parameters found on TRAIN data ---
+  BuyDip        {'drop_pct': np.float64(0.07)}
+  Scale-in      {'bin_size_pct': np.float64(0.1), 'max_drop_pct': np.float64(0.15), 'initial_alloc_pct': np.float64(0.5), 'exit_sma_window': 50}
+  S-in+Hld      {'hold_pct': np.float64(0.1), 'bin_size_pct': np.float64(0.05), 'max_drop_pct': np.float64(0.1), 'initial_alloc_pct': np.float64(0.1), 'exit_sma_window': 50}
+  SMACross      {'sma_window': 100, 'band_pct': np.float64(0.02)}
+  MACD          {'fast_ema': 12, 'slow_ema': 45, 'signal_ema': 12}
+  ATR-SMA       {'sma_window': 100, 'atr_window': 20, 'atr_multiplier': np.float64(0.5)}
+  DualMom       {'lookback': 21}
+  VIX           {'vix_low': 25, 'vix_high': 40}
+  VolTgt        {'target_vol': np.float64(0.35), 'vol_window': np.int64(2), 'max_leverage': 1}
+  MultiAsset    {'lookback': 21}
+
+--- Out-of-sample results (TEST data) ---
+==============================================================================================================================================================
+                                 BuyDip     Scale-in     S-in+Hld     SMACross         MACD      ATR-SMA      DualMom          VIX       VolTgt   MultiAsset 
+==============================================================================================================================================================
+CAGR                             12.40%       16.20%       17.10%       10.70%        5.10%       19.70%       17.50%        7.10%       24.70%       17.50% 
+CAGR buy&hold                    24.50%       24.50%       24.50%       24.50%       24.50%       24.50%       24.50%       24.50%       24.50%       24.50% 
+Total return                      43.4%        59.1%        62.8%        36.8%        16.5%        74.3%        64.5%        23.7%        97.7%        64.5% 
+Final equity                     14,343       15,915       16,282       13,681       11,648       17,434       16,452       12,375       19,771       16,452 
+Max drawdown                    -19.10%      -22.80%      -23.50%      -18.00%      -16.10%      -16.20%      -20.40%      -29.20%      -24.40%      -20.40% 
+Win rate                            1.0          1.0          1.0          0.6        0.417          0.7        0.575         0.48          N/A        0.575 
+Trades closed                         4            2            7           10           24           10          127           25            0          127 
+Avg trade return                  0.094        0.177         0.12         0.03        0.004        0.054        0.004        0.006          N/A        0.004 
+Max trade gain                    0.109        0.251        0.251        0.145        0.105        0.195        0.118        0.218          N/A        0.118 
+Max trade drop                     0.08        0.104        0.026        -0.06       -0.064       -0.066       -0.031        -0.12          N/A       -0.031 
+==============================================================================================================================================================

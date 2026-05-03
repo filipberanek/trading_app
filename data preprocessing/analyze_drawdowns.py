@@ -1,3 +1,13 @@
+"""
+Analyze peak-to-trough drawdowns for every CSV in input_data/.
+
+Output
+------
+  Print  : per-ticker table + overall ranking
+  File   : analysis_outputs/drawdown_summary.txt
+"""
+from __future__ import annotations
+
 import os
 import sys
 from statistics import mean, stdev
@@ -5,16 +15,14 @@ from statistics import mean, stdev
 try:
     import pandas as pd
 except Exception:
-    print('pandas is required. Install it with: pip install pandas')
+    print('pandas is required.  pip install pandas')
     sys.exit(1)
 
 
-def detect_peaks_troughs(dates, prices):
-    n = len(prices)
-    if n == 0:
-        return []
+# ── Peak / trough detection ───────────────────────────────────────────────────
 
-    # find initial trend
+def _detect_peaks_troughs(dates: list, prices: list):
+    n = len(prices)
     trend = None
     for i in range(1, n):
         if prices[i] > prices[i - 1]:
@@ -23,133 +31,173 @@ def detect_peaks_troughs(dates, prices):
         if prices[i] < prices[i - 1]:
             trend = 'down'
             break
-
     if trend is None:
-        return []
+        return [], []
 
-    last_max = prices[0]
-    last_max_idx = 0
-    last_min = prices[0]
-    last_min_idx = 0
-
-    peaks = []
-    troughs = []
+    last_max, last_max_idx = prices[0], 0
+    last_min, last_min_idx = prices[0], 0
+    peaks, troughs = [], []
 
     for i in range(1, n):
         p = prices[i]
         if trend == 'up':
             if p >= last_max:
-                last_max = p
-                last_max_idx = i
+                last_max, last_max_idx = p, i
             if p < prices[i - 1]:
-                # up -> down: record peak
                 peaks.append((last_max_idx, last_max, dates[last_max_idx]))
                 trend = 'down'
-                last_min = p
-                last_min_idx = i
-        else:  # trend == 'down'
+                last_min, last_min_idx = p, i
+        else:
             if p <= last_min:
-                last_min = p
-                last_min_idx = i
+                last_min, last_min_idx = p, i
             if p > prices[i - 1]:
-                # down -> up: record trough
                 troughs.append((last_min_idx, last_min, dates[last_min_idx]))
                 trend = 'up'
-                last_max = p
-                last_max_idx = i
+                last_max, last_max_idx = p, i
 
     return peaks, troughs
 
 
-def pair_peaks_troughs(peaks, troughs):
-    # pair in time-order: each peak paired with the next trough that occurs after it
-    pairs = []
-    ti = 0
+def _pair_peaks_troughs(peaks: list, troughs: list) -> list[dict]:
+    pairs, ti = [], 0
     for pk_idx, pk_val, pk_date in peaks:
-        # find first trough with index > pk_idx
         while ti < len(troughs) and troughs[ti][0] <= pk_idx:
             ti += 1
         if ti < len(troughs):
-            tr_idx, tr_val, tr_date = troughs[ti]
-            pairs.append({
-                'peak_idx': pk_idx,
-                'peak_val': pk_val,
-                'peak_date': pk_date,
-                'trough_idx': tr_idx,
-                'trough_val': tr_val,
-                'trough_date': tr_date,
-            })
+            _, tr_val, tr_date = troughs[ti]
+            pairs.append(dict(
+                peak_date=pk_date, peak_val=pk_val,
+                trough_date=tr_date, trough_val=tr_val,
+            ))
             ti += 1
-
     return pairs
 
 
-def analyze_drawdowns(path_csv):
-    df = pd.read_csv(path_csv, parse_dates=['Date'])
-    if 'Close' not in df.columns:
-        print('CSV must contain a Close column')
-        return 1
+# ── Per-ticker analysis ───────────────────────────────────────────────────────
 
-    dates = df['Date'].tolist()
+def _analyze_one(csv_path: str) -> dict | None:
+    """Return summary dict for one ticker CSV, or None on error."""
+    try:
+        df = pd.read_csv(csv_path, parse_dates=['Date'])
+    except Exception as e:
+        print(f'  ERROR reading {csv_path}: {e}')
+        return None
+
+    if 'Close' not in df.columns or df.empty:
+        print(f'  SKIP {os.path.basename(csv_path)}: no Close column or empty')
+        return None
+
+    dates  = df['Date'].tolist()
     prices = df['Close'].astype(float).tolist()
 
-    peaks, troughs = detect_peaks_troughs(dates, prices)
-    pairs = pair_peaks_troughs(peaks, troughs)
+    peaks, troughs = _detect_peaks_troughs(dates, prices)
+    pairs          = _pair_peaks_troughs(peaks, troughs)
 
-    drawdowns_abs = []
-    drawdowns_pct = []
-    rows = []
+    if not pairs:
+        return None
 
-    for pair in pairs:
-        pk = pair['peak_val']
-        tr = pair['trough_val']
-        dd = pk - tr
-        dd_pct = dd / pk if pk != 0 else 0.0
-        drawdowns_abs.append(dd)
-        drawdowns_pct.append(dd_pct)
-        rows.append({
-            'peak_date': pair['peak_date'],
-            'peak_val': pk,
-            'trough_date': pair['trough_date'],
-            'trough_val': tr,
-            'drawdown_abs': dd,
-            'drawdown_pct': dd_pct,
-        })
+    pcts = [(p['peak_val'] - p['trough_val']) / p['peak_val']
+            for p in pairs if p['peak_val'] != 0]
+    if not pcts:
+        return None
 
-    if len(drawdowns_abs) == 0:
-        print('No peak->trough pairs found.')
-        return 0
+    ticker = os.path.splitext(os.path.basename(csv_path))[0]
+    start  = df['Date'].iloc[0].date()
+    end    = df['Date'].iloc[-1].date()
 
-    summary = {
-        'count': len(drawdowns_abs),
-        'mean_abs': mean(drawdowns_abs),
-        'std_abs': stdev(drawdowns_abs) if len(drawdowns_abs) > 1 else 0.0,
-        'max_abs': max(drawdowns_abs),
-        'mean_pct': mean(drawdowns_pct),
-        'std_pct': stdev(drawdowns_pct) if len(drawdowns_pct) > 1 else 0.0,
-        'max_pct': max(drawdowns_pct),
-    }
+    return dict(
+        ticker     = ticker,
+        start      = start,
+        end        = end,
+        rows       = len(df),
+        count      = len(pcts),
+        mean_pct   = mean(pcts),
+        std_pct    = stdev(pcts) if len(pcts) > 1 else 0.0,
+        max_pct    = max(pcts),
+        median_pct = sorted(pcts)[len(pcts) // 2],
+    )
 
-    out_df = pd.DataFrame(rows)
-    out_csv = os.path.join(os.path.dirname(path_csv), 'drawdowns_detail.csv')
-    out_df.to_csv(out_csv, index=False)
 
-    print('Drawdowns summary:')
-    print(f"Count: {summary['count']}")
-    print(f"Mean abs: {summary['mean_abs']:.6f}")
-    print(f"Std abs: {summary['std_abs']:.6f}")
-    print(f"Max abs: {summary['max_abs']:.6f}")
-    print(f"Mean pct: {summary['mean_pct']:.6%}")
-    print(f"Std pct: {summary['std_pct']:.6%}")
-    print(f"Max pct: {summary['max_pct']:.6%}")
-    print(f'Detailed per-drawdown csv written to: {out_csv}')
+# ── Formatting helpers ────────────────────────────────────────────────────────
 
-    return 0
+_HDR = (
+    f"{'Ticker':<6}  {'Start':>10}  {'End':>10}  {'Bars':>5}  "
+    f"{'DD#':>4}  {'MaxDD':>7}  {'MeanDD':>7}  {'MedianDD':>9}  {'StdDD':>7}"
+)
+_SEP = '-' * len(_HDR)
+
+
+def _row(s: dict) -> str:
+    return (
+        f"{s['ticker']:<6}  {str(s['start']):>10}  {str(s['end']):>10}  "
+        f"{s['rows']:>5}  {s['count']:>4}  "
+        f"{s['max_pct']:>6.1%}  {s['mean_pct']:>6.1%}  "
+        f"{s['median_pct']:>8.1%}  {s['std_pct']:>6.1%}"
+    )
+
+
+def _build_report(summaries: list[dict]) -> str:
+    by_max = sorted(summaries, key=lambda x: x['max_pct'], reverse=True)
+    lines  = [
+        f"Drawdown analysis — {len(summaries)} tickers",
+        f"Ranked by Max Drawdown (descending)",
+        _SEP, _HDR, _SEP,
+    ]
+    lines += [_row(s) for s in by_max]
+    lines.append(_SEP)
+
+    # overall stats
+    all_max  = [s['max_pct']  for s in summaries]
+    all_mean = [s['mean_pct'] for s in summaries]
+    lines += [
+        '',
+        f"Cross-ticker stats (worst MaxDD first):",
+        f"  Avg  MaxDD across tickers : {mean(all_max):.1%}",
+        f"  Avg MeanDD across tickers : {mean(all_mean):.1%}",
+        f"  Ticker with largest MaxDD : {by_max[0]['ticker']}  ({by_max[0]['max_pct']:.1%})",
+        f"  Ticker with smallest MaxDD: {by_max[-1]['ticker']}  ({by_max[-1]['max_pct']:.1%})",
+    ]
+    return '\n'.join(lines)
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def run(input_dir: str, out_dir: str) -> None:
+    os.makedirs(out_dir, exist_ok=True)
+
+    csv_files = sorted(
+        f for f in os.listdir(input_dir)
+        if f.endswith('.csv')
+    )
+
+    if not csv_files:
+        print(f'No CSV files found in {input_dir}')
+        return
+
+    print(f'Analyzing {len(csv_files)} files in {input_dir} ...\n')
+
+    summaries = []
+    for fname in csv_files:
+        path = os.path.join(input_dir, fname)
+        result = _analyze_one(path)
+        if result:
+            summaries.append(result)
+
+    if not summaries:
+        print('No drawdown data found.')
+        return
+
+    report = _build_report(summaries)
+    print(report)
+
+    txt_path = os.path.join(out_dir, 'drawdown_summary.txt')
+    with open(txt_path, 'w', encoding='utf-8') as f:
+        f.write(report + '\n')
+    print(f'\nSaved: {txt_path}')
 
 
 if __name__ == '__main__':
-    # default path is the data file in the sibling 'data' folder
-    base_dir = os.path.dirname(__file__)
-    default_csv = os.path.join(base_dir, 'data', 'ndx_20260419T190718Z.csv')
-    path = sys.argv[1] if len(sys.argv) > 1 else default_csv
-    sys.exit(analyze_drawdowns(path))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    input_dir  = os.path.join(script_dir, 'input_data')
+    out_dir    = os.path.join(script_dir, 'analysis_outputs')
+    run(input_dir, out_dir)

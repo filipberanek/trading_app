@@ -1,0 +1,187 @@
+Low positive-correlation ticker selection
+Universe  : 16 tickers
+Period    : 2020-04-20 to 2026-04-24  (1360 trading days)
+Threshold : positive corr > 0.70 is problematic  (negative correlations are fine)
+Target n  : 8
+
+────────────────────────────────────────────────────────────
+SELECTED SET  (8 tickers)
+────────────────────────────────────────────────────────────
+   1. EQQQ    avg positive corr vs universe: 0.386
+   2. SEGA    avg positive corr vs universe: 0.090
+   3. IUES    avg positive corr vs universe: 0.231
+   4. IGLN    avg positive corr vs universe: 0.102
+   5. IDTL    avg positive corr vs universe: 0.112
+   6. IBZL    avg positive corr vs universe: 0.251
+   7. EEA     avg positive corr vs universe: 0.233
+   8. IUCS    avg positive corr vs universe: 0.272
+
+Sub-matrix  (! = pair exceeds threshold):
+         EQQQ     SEGA     IUES     IGLN     IDTL     IBZL      EEA     IUCS
+----------------------------------------------------------------------------
+EQQQ     1.00    -0.13     0.23    -0.01    -0.02     0.32     0.24     0.31
+SEGA    -0.13     1.00    -0.29     0.15     0.50    -0.14     0.01    -0.04
+IUES     0.23    -0.29     1.00     0.07    -0.23     0.40     0.21     0.27
+IGLN    -0.01     0.15     0.07     1.00     0.18     0.09     0.12     0.12
+IDTL    -0.02     0.50    -0.23     0.18     1.00    -0.07     0.02     0.06
+IBZL     0.32    -0.14     0.40     0.09    -0.07     1.00     0.22     0.22
+EEA      0.24     0.01     0.21     0.12     0.02     0.22     1.00     0.22
+IUCS     0.31    -0.04     0.27     0.12     0.06     0.22     0.22     1.00
+
+  Pairs in selection : 28
+  Max positive corr  : +0.496
+  Avg corr           : +0.109
+  Min corr           : -0.286
+
+  All pairs within selection are below threshold. ✓
+
+────────────────────────────────────────────────────────────
+ASSETS SATISFYING THE CONDITION
+(no pair with ANY other ticker in universe exceeds +0.70)
+────────────────────────────────────────────────────────────
+  IGLN    max positive corr with any other ticker: +0.252
+  IUES    max positive corr with any other ticker: +0.416
+  IBZL    max positive corr with any other ticker: +0.480
+  EEA     max positive corr with any other ticker: +0.490
+  SEGA    max positive corr with any other ticker: +0.576
+  IJPA    max positive corr with any other ticker: +0.609
+  IUCS    max positive corr with any other ticker: +0.627
+  IUHC    max positive corr with any other ticker: +0.627
+  IEEM    max positive corr with any other ticker: +0.652
+  SMEA    max positive corr with any other ticker: +0.652
+
+────────────────────────────────────────────────────────────
+EXCLUDED FROM GREEDY SELECTION  (8 tickers)
+────────────────────────────────────────────────────────────
+  DBZB    blocked by: IDTL (+0.81)
+  IEEM    dropped (n limit reached)
+  IJPA    dropped (n limit reached)
+  IUCD    blocked by: EQQQ (+0.80)
+  IUHC    dropped (n limit reached)
+  IUIT    blocked by: EQQQ (+0.91)
+  SMEA    dropped (n limit reached)
+  SXR8    blocked by: EQQQ (+0.89)
+
+────────────────────────────────────────────────────────────
+REFERENCE — ALL UNIVERSE PAIRS  (highest positive corr first)
+────────────────────────────────────────────────────────────
+  EQQQ   <-> IUIT    +0.907  ← VIOLATION
+  EQQQ   <-> SXR8    +0.885  ← VIOLATION
+  DBZB   <-> IDTL    +0.807  ← VIOLATION
+  EQQQ   <-> IUCD    +0.797  ← VIOLATION
+  IUIT   <-> SXR8    +0.783  ← VIOLATION
+  IUCD   <-> IUIT    +0.780  ← VIOLATION
+  IUCD   <-> SXR8    +0.734  ← VIOLATION
+  IEEM   <-> SMEA    +0.652
+  IUCS   <-> IUHC    +0.627
+  IUCD   <-> SMEA    +0.624
+  IJPA   <-> SXR8    +0.609
+  SMEA   <-> SXR8    +0.602
+  IUIT   <-> SMEA    +0.592
+  DBZB   <-> SEGA    +0.576
+  IUHC   <-> SMEA    +0.568
+  IUHC   <-> SXR8    +0.566
+  EQQQ   <-> IEEM    +0.565
+  IJPA   <-> SMEA    +0.557
+  IEEM   <-> IUIT    +0.555
+  IEEM   <-> SXR8    +0.549
+  EQQQ   <-> IJPA    +0.539
+  EQQQ   <-> SMEA    +0.533
+  IEEM   <-> IUCD    +0.527
+  IJPA   <-> IUCD    +0.520
+  IEEM   <-> IJPA    +0.502
+  IUCD   <-> IUHC    +0.501
+  IDTL   <-> SEGA    +0.496
+  EEA    <-> SMEA    +0.490
+  IJPA   <-> IUIT    +0.482
+  IBZL   <-> IEEM    +0.480
+  IUHC   <-> IUIT    +0.478
+  EQQQ   <-> IUHC    +0.456
+  IUCS   <-> SMEA    +0.451
+  IUCS   <-> SXR8    +0.432
+  IUES   <-> SXR8    +0.416
+  IUCD   <-> IUCS    +0.404
+  IBZL   <-> SXR8    +0.401
+  IBZL   <-> IUES    +0.401
+  IBZL   <-> SMEA    +0.394
+  IJPA   <-> IUHC    +0.393
+  IUES   <-> SMEA    +0.383
+  IBZL   <-> IJPA    +0.374
+  EEA    <-> IUCD    +0.343
+  IBZL   <-> IUCD    +0.342
+  EEA    <-> IEEM    +0.340
+  EEA    <-> IUIT    +0.334
+  IUCS   <-> IUIT    +0.331
+  IUCD   <-> IUES    +0.323
+  IJPA   <-> IUES    +0.322
+  EQQQ   <-> IBZL    +0.319
+  EQQQ   <-> IUCS    +0.313
+  IEEM   <-> IUHC    +0.312
+  IBZL   <-> IUIT    +0.310
+  EEA    <-> IJPA    +0.306
+  IJPA   <-> IUCS    +0.298
+  IUES   <-> IUHC    +0.296
+  EEA    <-> IUHC    +0.285
+  IEEM   <-> IUES    +0.282
+  IUCS   <-> IUES    +0.274
+  EEA    <-> SXR8    +0.271
+  DBZB   <-> IGLN    +0.252
+  IUES   <-> IUIT    +0.250
+  EEA    <-> EQQQ    +0.242
+  EQQQ   <-> IUES    +0.230
+  IBZL   <-> IUCS    +0.225
+  IBZL   <-> IUHC    +0.222
+  EEA    <-> IUCS    +0.217
+  EEA    <-> IBZL    +0.216
+  EEA    <-> IUES    +0.212
+  IEEM   <-> IUCS    +0.208
+  IDTL   <-> IGLN    +0.182
+  IGLN   <-> SEGA    +0.146
+  EEA    <-> IGLN    +0.121
+  IEEM   <-> IGLN    +0.120
+  IGLN   <-> IUCS    +0.118
+  IGLN   <-> IUHC    +0.111
+  DBZB   <-> IUCS    +0.111
+  DBZB   <-> IUHC    +0.099
+  IGLN   <-> IUIT    +0.097
+  SEGA   <-> SMEA    +0.088
+  IBZL   <-> IGLN    +0.087
+  DBZB   <-> EEA     +0.083
+  IGLN   <-> IUCD    +0.077
+  IGLN   <-> SMEA    +0.074
+  IGLN   <-> IUES    +0.073
+  IGLN   <-> IJPA    +0.070
+  DBZB   <-> IUCD    +0.066
+  IDTL   <-> IUCS    +0.065
+  IDTL   <-> IUHC    +0.064
+  DBZB   <-> IJPA    +0.040
+  IDTL   <-> IUCD    +0.035
+  IEEM   <-> SEGA    +0.034
+  DBZB   <-> IUIT    +0.025
+  EEA    <-> IDTL    +0.024
+  EEA    <-> SEGA    +0.008
+  IDTL   <-> IUIT    +0.001
+  IDTL   <-> IJPA    +0.001
+  DBZB   <-> EQQQ    -0.005
+  EQQQ   <-> IGLN    -0.006
+  DBZB   <-> SMEA    -0.010
+  EQQQ   <-> IDTL    -0.023
+  DBZB   <-> IBZL    -0.034
+  IUCS   <-> SEGA    -0.039
+  IUHC   <-> SEGA    -0.040
+  DBZB   <-> SXR8    -0.047
+  DBZB   <-> IEEM    -0.051
+  IUCD   <-> SEGA    -0.055
+  IDTL   <-> SMEA    -0.056
+  IGLN   <-> SXR8    -0.057
+  IBZL   <-> IDTL    -0.066
+  IUIT   <-> SEGA    -0.073
+  IDTL   <-> IEEM    -0.081
+  IDTL   <-> SXR8    -0.097
+  EQQQ   <-> SEGA    -0.127
+  IJPA   <-> SEGA    -0.137
+  IBZL   <-> SEGA    -0.144
+  DBZB   <-> IUES    -0.183
+  SEGA   <-> SXR8    -0.194
+  IDTL   <-> IUES    -0.227
+  IUES   <-> SEGA    -0.286
