@@ -5,9 +5,10 @@ Single-asset mode (dfs=None):
   QQQ N-day return > 0 → hold QQQ, else → cash.
 
 Multi-asset mode (dfs provided, default):
-  1. Relative momentum: pick risky asset (QQQ/TLT/GLD) with highest N-day return.
-  2. Absolute momentum: if best risky asset momentum <= 0 → hold SHY instead.
+  1. Relative momentum: pick risky asset with highest N-day return.
+  2. Absolute momentum: if best risky asset momentum <= 0 → hold CASH instead.
   Signal checked daily. Trade at next open when selected asset changes.
+  CASH earns zero return — no interest, no price movement.
 
 Grid search: lookback window 21–252 days.
 """
@@ -24,7 +25,7 @@ if _ALGO_ROOT not in sys.path:
 from data_loader import load_ohlcv, load_all
 
 DEFAULT_RISKY = ('QQQ', 'TLT', 'GLD')
-DEFAULT_SAFE  = 'SHY'
+DEFAULT_SAFE  = 'XEON'
 
 TICKER_NAMES: dict = {
     'EQQQ': 'Invesco NASDAQ-100', 'QQQ':  'Invesco NASDAQ-100',
@@ -33,7 +34,8 @@ TICKER_NAMES: dict = {
     'IBZL': 'MSCI Brazil',        'EEA':  'MSCI E.Europe',
     'IUCS': 'S&P 500 Cons.Stpls', 'SEGA': 'Euro Agg Bond',
     'TLT':  'iSh 20+yr Treasury', 'GLD':  'SPDR Gold',
-    'SHY':  'iSh 1-3yr Treasury',
+    'SHY':  'iSh 1-3yr Treasury', 'CASH': 'Cash (risk-off)',
+    'XEON': 'EUR Overnight (XEON)',
 }
 
 
@@ -48,12 +50,14 @@ def fetch_data(ticker='QQQ', period='5y'):
 
 
 def fetch_all(assets, period='5y'):
-    return load_all(list(assets), period=period)
+    tradeable = [a for a in assets if a != 'CASH']
+    return load_all(tradeable, period=period)
 
 
 def align_assets(dfs, assets):
-    closes = pd.DataFrame({t: dfs[t]['Close'] for t in assets}).dropna()
-    opens  = pd.DataFrame({t: dfs[t]['Open']  for t in assets}).dropna()
+    tradeable = [a for a in assets if a != 'CASH']
+    closes = pd.DataFrame({t: dfs[t]['Close'] for t in tradeable}).dropna()
+    opens  = pd.DataFrame({t: dfs[t]['Open']  for t in tradeable}).dropna()
     return closes, opens
 
 
@@ -120,20 +124,20 @@ def print_stats(stats, initial_capital, equity_series, lookback, mode_label, out
 
 
 def save_plots_multi(closes, equity_series, held_list, momentum_df,
-                     stats, lookback, risky_assets, safe_asset, out_dir):
+                     stats, lookback, risky_assets, out_dir):
     trades_df = stats['trades_df'].copy()
     if len(trades_df) > 0:
         trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date'])
         trades_df['exit_date']  = pd.to_datetime(trades_df['exit_date'])
 
-    all_assets = list(risky_assets) + [safe_asset]
-    colors = {'QQQ': 'tab:blue', 'TLT': 'tab:orange', 'GLD': 'tab:green', 'SHY': 'gray'}
+    colors = {'QQQ': 'tab:blue', 'TLT': 'tab:orange', 'GLD': 'tab:green', 'CASH': 'gray'}
 
     fig, (ax_price, ax_equity, ax_held) = plt.subplots(
         3, 1, sharex=True, figsize=(14, 12),
         gridspec_kw={'height_ratios': [3, 2, 1]}
     )
-    for t in all_assets:
+    # CASH has no price data — only plot tradeable risky assets
+    for t in risky_assets:
         if t in closes.columns:
             norm = closes[t] / float(closes[t].iloc[0])
             norm.plot(ax=ax_price, label=_ticker_label(t), color=colors.get(t), linewidth=1.2)
@@ -145,8 +149,10 @@ def save_plots_multi(closes, equity_series, held_list, momentum_df,
     ax_equity.set_title('Equity Curve')
     ax_equity.set_ylabel('Account Value'); ax_equity.grid(True)
 
+    # Held chart includes CASH as a valid state
+    all_states = list(risky_assets) + ['CASH']
     held_series = pd.Series(held_list, index=equity_series.index)
-    codes = {a: i for i, a in enumerate(all_assets)}
+    codes = {a: i for i, a in enumerate(all_states)}
     held_series.map(codes).fillna(-1).plot(ax=ax_held, drawstyle='steps-post', color='purple')
     ax_held.set_yticks(list(codes.values()))
     ax_held.set_yticklabels(list(codes.keys()), fontsize=8)
@@ -213,13 +219,14 @@ def run_backtest_dual_momentum(ticker='QQQ', period='5y', initial_capital=10000.
 
     # ── MULTI-ASSET MODE ─────────────────────────────────────────────────────
     if dfs is not None:
-        all_assets = list(risky_assets) + [safe_asset]
+        all_assets = list(risky_assets) + ([safe_asset] if safe_asset != 'CASH' else [])
         closes, opens = align_assets(dfs, all_assets)
         if closes.empty:
             raise ValueError('No overlapping trading days across assets.')
 
         momentum = closes / closes.shift(lookback) - 1
-        bh_close = closes['QQQ'] if 'QQQ' in closes.columns else None
+        bh_col   = next((c for c in ('EQQQ', 'QQQ') if c in closes.columns), None)
+        bh_close = closes[bh_col] if bh_col else None
 
         cash = float(initial_capital)
         shares = 0.0
@@ -229,10 +236,11 @@ def run_backtest_dual_momentum(ticker='QQQ', period='5y', initial_capital=10000.
 
         for i in range(len(closes)):
             date  = closes.index[i]
-            price = float(closes[current_asset].iat[i]) if current_asset else 0.0
+            # CASH holds no shares — equity equals cash balance only
+            price = float(closes[current_asset].iat[i]) if current_asset and current_asset != 'CASH' else 0.0
             eq = cash + shares * price
             equity_list.append(eq)
-            held_list.append(current_asset or safe_asset)
+            held_list.append(current_asset or 'CASH')
 
             if i < lookback or momentum.iloc[i].isna().all():
                 continue
@@ -241,7 +249,8 @@ def run_backtest_dual_momentum(ticker='QQQ', period='5y', initial_capital=10000.
 
             if target != current_asset and i + 1 < len(closes):
                 next_date = closes.index[i + 1]
-                if current_asset is not None and shares > 0:
+                # Close current position (only if in a real asset, not CASH)
+                if current_asset is not None and current_asset != 'CASH' and shares > 0:
                     exit_px = float(opens[current_asset].iat[i + 1])
                     pnl = shares * exit_px - shares * entry_price
                     closed_trades.append({
@@ -253,11 +262,16 @@ def run_backtest_dual_momentum(ticker='QQQ', period='5y', initial_capital=10000.
                     })
                     cash = shares * exit_px
                     shares = 0.0
-                buy_px = float(opens[target].iat[i + 1])
-                shares = cash / buy_px
-                cash  -= shares * buy_px
+                if target != 'CASH':
+                    # Buy the risky target asset
+                    buy_px = float(opens[target].iat[i + 1])
+                    shares = cash / buy_px
+                    cash  -= shares * buy_px
+                    entry_price = buy_px
+                else:
+                    # Move to CASH: stay flat, no purchase, no interest
+                    entry_price = None
                 current_asset = target
-                entry_price   = buy_px
                 entry_date    = next_date
                 entry_idx     = i + 1
 
@@ -269,7 +283,7 @@ def run_backtest_dual_momentum(ticker='QQQ', period='5y', initial_capital=10000.
             trades_csv = os.path.join(out_dir, 'trades_detail_dual_momentum.csv')
             stats['trades_df'].to_csv(trades_csv, index=False)
             fig_path = save_plots_multi(closes, equity_series, held_list, momentum,
-                                        stats, lookback, risky_assets, safe_asset, out_dir)
+                                        stats, lookback, risky_assets, out_dir)
             print_stats(stats, initial_capital, equity_series, lookback,
                         f'multi {list(risky_assets)}→{safe_asset}',
                         {'trades_csv': trades_csv, 'fig_path': fig_path})
@@ -384,10 +398,9 @@ def grid_search(ticker='QQQ', period='5y', initial_capital=10000.0,
                 risky_assets=DEFAULT_RISKY,
                 safe_asset=DEFAULT_SAFE,
                 maximize='cagr'):
-    all_assets = list(risky_assets) + [safe_asset]
     print(f'Grid search: {len(lookback_values)} combinations...')
-    print(f'Downloading {all_assets} data once...')
-    raw_dfs = fetch_all(all_assets, period)
+    print(f'Downloading {list(risky_assets)} data once...')
+    raw_dfs = fetch_all(list(risky_assets), period)
 
     results = []
     for lb in lookback_values:

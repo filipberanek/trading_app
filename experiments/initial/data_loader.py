@@ -22,7 +22,7 @@ import pandas as pd
 
 _HERE    = os.path.dirname(os.path.abspath(__file__))    # experiments/initial/
 _APP     = os.path.dirname(os.path.dirname(_HERE))        # trading_app/
-_CSV_DIR = os.path.join(_APP, 'data preprocessing', 'input_data')
+_CSV_DIR = os.path.join(_APP, 'data_preprocessing', 'input_data')
 
 # ── IBKR settings ─────────────────────────────────────────────────────────────
 

@@ -26,7 +26,7 @@ import yfinance as yf
 _HERE  = os.path.dirname(__file__)                              # trading_algo_comparison/
 ROOT   = os.path.dirname(_HERE)                                 # experiments/initial/
 _APP   = os.path.dirname(os.path.dirname(ROOT))                 # trading_app/
-DATA_DIR = os.path.join(_APP, 'data preprocessing', 'input_data')
+DATA_DIR = os.path.join(_APP, 'data_preprocessing', 'input_data')
 
 # ── Ticker config ─────────────────────────────────────────────────────────────
 
@@ -35,13 +35,14 @@ MAIN_TICKER  = 'EQQQ'
 # Alternatives rotated into when EQQQ signal is off (SMA / ATR-SMA strategies)
 ALT_ASSETS   = ('IUES', 'IGLN', 'IDTL', 'IBZL', 'EEA', 'IUCS')
 
-# Safe-haven asset when no alt has positive momentum
-SAFE_ASSET   = 'SEGA'
+# Safe-haven for all rotation strategies
+SAFE_ASSET     = 'XEON'
+SAFE_ASSET_ROT = SAFE_ASSET
 
 # Full risky universe for momentum-rotation strategies (Dual Momentum, Multi-Asset)
-RISKY_ASSETS = ('EQQQ', 'IUES', 'IGLN', 'IDTL', 'IBZL', 'EEA', 'IUCS')
+RISKY_ASSETS = ('EQQQ', 'IUES', 'IGLN', 'IBZL', 'EEA', 'IUCS')
 
-# All tickers needed for rotation (risky + safe)
+# All tickers needed for data loading
 ALL_ROTATION = list(RISKY_ASSETS) + [SAFE_ASSET]
 
 # ── Strategy imports ──────────────────────────────────────────────────────────
@@ -377,11 +378,11 @@ def run_grid_search_all(initial_capital: float = 10_000.0, maximize: str = 'cagr
     df5 = _run('ATR-Adjusted SMA',     gs5, ticker=yf_ticker, period='max', initial_capital=initial_capital, maximize=maximize,
                alt_assets=ALT_ASSETS, safe_asset=SAFE_ASSET)
     df6 = _run('Dual Momentum',        gs6, ticker=yf_ticker, period='max', initial_capital=initial_capital, maximize=maximize,
-               risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET)
+               risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET_ROT)
     df7 = _run('VIX Regime',           gs7, ticker=yf_ticker, period='max', initial_capital=initial_capital, maximize=maximize)
     df8 = _run('Volatility Targeting', gs8, ticker=yf_ticker, period='max', initial_capital=initial_capital, maximize=maximize)
     df9 = _run('Multi-Asset Rotation', gs9,                   period='max', initial_capital=initial_capital, maximize=maximize,
-               risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET)
+               risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET_ROT)
 
     col_names = ['BuyDip', 'Scale-in', 'S-in+Hld', 'SMACross', 'MACD',
                  'ATR-SMA', 'DualMom', 'VIX', 'VolTgt', 'MultiAsset']

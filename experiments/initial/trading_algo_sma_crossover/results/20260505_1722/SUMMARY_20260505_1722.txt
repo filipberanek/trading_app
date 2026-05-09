@@ -1,0 +1,79 @@
+========================================================================
+COMPREHENSIVE VALIDATION — SMACross / ATR-SMA / ATR-SMA-C
+Generated : 2026-05-05 17:22
+Train     : 2017-03-23 → 2023-03-22 (1525 days)
+Test      : 2023-03-23 → 2026-04-24 (780 days)
+Assets    : main=EQQQ  alts=('IUES', 'IGLN', 'IBZL', 'EEA', 'IUCS')  safe=SEGA
+Capital   : 10,000
+========================================================================
+
+-- SECTION 1: Best params from TRAIN grid search --
+  SMACross  : {'sma_window': 100, 'band_pct': 0.02}
+  ATR-SMA   : {'sma_window': 50, 'atr_window': 5, 'atr_multiplier': 0.25}
+  ATR-SMA-C : {'sma_window': 50, 'atr_window': 5, 'atr_multiplier': 0.25}
+
+  Top-3 SMACross on TRAIN:
+    sma=100 band=0.02  CAGR=18.20%  MaxDD=-28.90%  Trades=14
+    sma=100 band=0.03  CAGR=14.90%  MaxDD=-35.70%  Trades=12
+    sma=50 band=0.00  CAGR=14.60%  MaxDD=-35.50%  Trades=94
+
+  Top-3 ATR-SMA on TRAIN:
+    sma=50 atr=5 mult=0.25  CAGR=17.30%  MaxDD=-33.10%  Trades=58
+    sma=50 atr=14 mult=0.25  CAGR=17.00%  MaxDD=-33.10%  Trades=66
+    sma=50 atr=10 mult=0.25  CAGR=16.80%  MaxDD=-34.50%  Trades=62
+
+  Top-3 ATR-SMA-C on TRAIN:
+    sma=50 atr=5 mult=0.25  CAGR=17.40%  MaxDD=-33.10%  Trades=58
+    sma=50 atr=10 mult=0.25  CAGR=17.10%  MaxDD=-33.70%  Trades=61
+    sma=50 atr=14 mult=0.25  CAGR=17.00%  MaxDD=-33.10%  Trades=66
+
+-- SECTION 2: Walk-forward OOS results --
+
+  CAGR:
+             WF1    WF2   WF3    WF4   WF5
+strategy                                  
+ATR-SMA   +10.0% +10.7% -4.2%  +0.8% +4.8%
+ATR-SMA-C +10.5% +11.2% -3.7%  +1.2% +5.7%
+SMACross   +6.0% +17.1% -7.6% +10.2% +4.8%
+
+  Max Drawdown:
+             WF1    WF2    WF3    WF4    WF5
+strategy                                    
+ATR-SMA   -15.8% -14.7% -23.7% -20.3% -11.5%
+ATR-SMA-C -15.8% -14.7% -23.7% -20.3% -11.5%
+SMACross  -16.8% -16.4% -26.4% -11.5% -11.5%
+
+-- SECTION 3: Final OOS results (TEST period) --
+
+  Strategy        CAGR    MaxDD  Trades  WinRate   AvgRet   MaxGain   MaxDrop
+  ------------------------------------------------------------------------
+  Buy&Hold      24.48%  -26.91%       0      N/A      N/A       N/A       N/A
+  SMACross      11.30%  -18.00%      10    60.0%    3.20%    14.50%    -6.00%
+  ATR-SMA       19.70%  -20.30%      30    53.3%    1.70%    15.30%    -6.90%
+  ATR-SMA-C     19.90%  -20.30%      30    53.3%    1.70%    15.30%    -6.90%
+
+-- Annual returns per year (TEST period) --
+
+year        2023   2024   2025  2026
+strategy                            
+ATR-SMA    -9.8% +15.4% +14.5% +8.7%
+ATR-SMA-C  -9.5% +15.9% +15.1% +9.2%
+Buy&Hold  +28.4% +34.9%  +5.6% +8.1%
+SMACross   -1.4% +10.0% +13.1% +0.0%
+
+-- Notes --
+  • Per-year slices restart from cash — first bar may show fewer signals.
+  • Walk-forward confirms out-of-sample performance in 5 market regimes.
+  • Best params selected by max CAGR on TRAIN; MaxDD used as tiebreaker.
+  • ATR-SMA-C safe-haven fallback: cash @ 2% p.a. when all alts negative.
+
+Output files (D:\projects\trading\trading_app\experiments\initial\trading_algo_sma_crossover\results\20260505_1722):
+  01_grid_*.csv          — full grid search results
+  01_heatmap_*.png       — parameter space heatmaps (CAGR & MaxDD)
+  01_top10_*.csv         — top-10 parameter combos per strategy
+  02_walkforward.csv     — per-window OOS results
+  02_walkforward_chart.png
+  03_final_oos.csv       — final OOS summary table
+  03_annual_returns.csv  — per-year returns
+  03_annual_returns.png
+  SUMMARY_20260505_1722.txt

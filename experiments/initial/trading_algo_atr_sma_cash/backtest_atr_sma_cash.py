@@ -44,14 +44,14 @@ def fetch_all(assets, period='5y'):
     return load_all(list(assets), period=period)
 
 
-def select_alt_asset_or_cash(mom_row, alt_assets):
-    """Return best alt with positive momentum, or None (= go to cash)."""
-    alt_mom = {t: float(mom_row[t]) for t in alt_assets
-               if t in mom_row.index and not pd.isna(mom_row[t])}
-    if not alt_mom:
+def select_alt_asset_or_cash(strength_row, alt_assets):
+    """Return alt with strongest uptrend (Close-SMA)/ATR > 0, or None (= cash)."""
+    scores = {t: float(strength_row[t]) for t in alt_assets
+              if t in strength_row.index and not pd.isna(strength_row[t])}
+    if not scores:
         return None
-    best = max(alt_mom, key=alt_mom.get)
-    return best if alt_mom[best] > 0 else None
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 0 else None
 
 
 def compute_atr(df, window):
@@ -185,7 +185,9 @@ def run_backtest_atr_sma_cash(ticker='QQQ', period='5y', initial_capital=10000.0
                                alt_assets=DEFAULT_ALT_ASSETS,
                                alt_lookback=DEFAULT_ALT_LOOKBACK,
                                cash_rate_annual=0.02,
+                               commission=2.0,
                                verbose=True, df=None, alt_dfs=None):
+    COMMISSION = commission
     out_dir = os.path.dirname(__file__)
     if df is None:
         df = fetch_data(ticker, period)
@@ -205,7 +207,15 @@ def run_backtest_atr_sma_cash(ticker='QQQ', period='5y', initial_capital=10000.0
         df          = df.loc[common].copy()
         alt_closes  = alt_closes.loc[common]
         alt_opens   = alt_opens.loc[common]
-        alt_momentum = alt_closes / alt_closes.shift(alt_lookback) - 1
+        alt_sma      = alt_closes.rolling(sma_window).mean()
+        alt_atr_df   = pd.DataFrame(
+            {t: compute_atr(alt_dfs[t].loc[common], atr_window)
+             for t in alt_assets if t in alt_dfs},
+            index=common,
+        )
+        # Trend strength: (Close - SMA) / ATR — same logic as main signal
+        # Positive = above SMA, higher = stronger uptrend
+        alt_strength = (alt_closes - alt_sma) / alt_atr_df.replace(0, float('nan'))
 
     df['SMA']        = df['Close'].rolling(sma_window).mean()
     df['ATR']        = compute_atr(df, atr_window)
@@ -262,12 +272,18 @@ def run_backtest_atr_sma_cash(ticker='QQQ', period='5y', initial_capital=10000.0
 
         # ── Exit EQQQ ────────────────────────────────────────────────────────
         if in_position and close < sma_f * (1 - band_f):
-            proceeds = shares * close
+            if i + 1 < len(df):
+                exit_px       = float(df['Open'].iat[i + 1])
+                exit_date_val = df.index[i + 1]
+            else:
+                exit_px       = close          # last bar — no next open
+                exit_date_val = date
+            proceeds = shares * exit_px - COMMISSION
             pnl      = proceeds - shares * entry_price
             closed_trades.append({
                 'asset': ticker,
                 'entry_date': entry_date, 'entry_price': entry_price,
-                'exit_date': date,        'exit_price': close,
+                'exit_date': exit_date_val, 'exit_price': exit_px,
                 'shares': shares, 'pnl': pnl, 'held_days': i - (entry_idx or i),
             })
             cash       += proceeds
@@ -276,10 +292,11 @@ def run_backtest_atr_sma_cash(ticker='QQQ', period='5y', initial_capital=10000.0
             entry_price = entry_date = entry_idx = None
 
             # Decide: rotate into best alt or go to cash
-            if use_alt and i + 1 < len(df) and not alt_momentum.iloc[i].isna().all():
-                target = select_alt_asset_or_cash(alt_momentum.iloc[i], alt_assets)
+            if use_alt and i + 1 < len(df) and not alt_strength.iloc[i].isna().all():
+                target = select_alt_asset_or_cash(alt_strength.iloc[i], alt_assets)
                 if target is not None:
                     next_open_alt   = float(alt_opens[target].iat[i + 1])
+                    cash           -= COMMISSION
                     alt_shares      = cash / next_open_alt
                     cash           -= alt_shares * next_open_alt
                     alt_asset       = target
@@ -297,7 +314,7 @@ def run_backtest_atr_sma_cash(ticker='QQQ', period='5y', initial_capital=10000.0
                 # Close alt position first if held
                 if use_alt and alt_asset is not None and alt_shares > 0:
                     exit_alt_px  = float(alt_opens[alt_asset].iat[i + 1])
-                    alt_proceeds = alt_shares * exit_alt_px
+                    alt_proceeds = alt_shares * exit_alt_px - COMMISSION
                     alt_pnl      = alt_proceeds - alt_shares * alt_entry_price
                     closed_trades.append({
                         'asset': alt_asset,
@@ -312,6 +329,7 @@ def run_backtest_atr_sma_cash(ticker='QQQ', period='5y', initial_capital=10000.0
                     alt_entry_price = alt_entry_date = alt_entry_idx = None
 
                 # Buy EQQQ
+                cash       -= COMMISSION
                 shares      = cash / next_open
                 cash       -= shares * next_open
                 in_position = True
@@ -418,6 +436,34 @@ def grid_search(ticker='QQQ', period='5y', initial_capital=10000.0,
 
 
 if __name__ == '__main__':
-    res = run_backtest_atr_sma_cash(initial_capital=10000.0,
-                                     sma_window=200, atr_window=20, atr_multiplier=1.0)
+    _TICKER    = 'EQQQ'
+    _ALT_ASSETS = ('IUES', 'IGLN', 'IBZL', 'EEA', 'IUCS', 'SEGA')
+
+    _main_df  = load_ohlcv(_TICKER, period='all')
+    _alt_dfs  = {}
+    for _t in _ALT_ASSETS:
+        try:
+            _alt_dfs[_t] = load_ohlcv(_t, period='all')
+        except ValueError as _e:
+            print(f'WARNING: {_e}')
+
+    # Rotace do alt assetů + cash fallback:
+    res = run_backtest_atr_sma_cash(
+         ticker=_TICKER, initial_capital=10_000.0,
+         sma_window=30, atr_window=10, atr_multiplier=0.3,
+         alt_assets=_ALT_ASSETS,
+         df=_main_df, alt_dfs=_alt_dfs,
+         verbose=True,
+    )
+
+    # Jen cash při výstupu z EQQQ (žádná rotace):
+    """
+    res = run_backtest_atr_sma_cash(
+        ticker=_TICKER, initial_capital=10_000.0,
+        sma_window=30, atr_window=10, atr_multiplier=0.3,
+        alt_assets=(),
+        df=_main_df,
+        verbose=True,
+    )
+    """
     print('\nRESULT:', res)

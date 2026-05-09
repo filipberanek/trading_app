@@ -21,15 +21,16 @@ import matplotlib.pyplot as plt
 _HERE    = os.path.dirname(__file__)
 ROOT     = os.path.dirname(_HERE)
 _APP     = os.path.dirname(os.path.dirname(ROOT))
-DATA_DIR = os.path.join(_APP, 'data preprocessing', 'input_data')
+DATA_DIR = os.path.join(_APP, 'data_preprocessing', 'input_data')
 
 # ── Ticker config (mirrors compare_strategies.py) ─────────────────────────────
 
-MAIN_TICKER  = 'EQQQ'
-ALT_ASSETS   = ('IUES', 'IGLN', 'IDTL', 'IBZL', 'EEA', 'IUCS')
-SAFE_ASSET   = 'SEGA'
-RISKY_ASSETS = ('EQQQ', 'IUES', 'IGLN', 'IDTL', 'IBZL', 'EEA', 'IUCS')
-ALL_ROTATION = list(RISKY_ASSETS) + [SAFE_ASSET]
+MAIN_TICKER    = 'EQQQ'
+ALT_ASSETS     = ('IUES', 'IGLN', 'IDTL', 'IBZL', 'EEA', 'IUCS')
+SAFE_ASSET     = 'XEON'   # safe haven for all rotation strategies
+SAFE_ASSET_ROT = SAFE_ASSET
+RISKY_ASSETS   = ('EQQQ', 'IUES', 'IGLN', 'IBZL', 'EEA', 'IUCS')
+ALL_ROTATION   = list(RISKY_ASSETS) + [SAFE_ASSET]
 
 TRAIN_YEARS = 6   # first N years used for grid search
 
@@ -294,7 +295,7 @@ def _gs_dual_momentum(dfs, capital, maximize):
         try:
             r = run_backtest_dual_momentum(
                 initial_capital=capital, lookback=lb,
-                risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET,
+                risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET_ROT,
                 verbose=False, dfs=dfs)
             results.append({'lookback': lb, 'cagr': r['cagr'],
                             'total_return': r['total_return'],
@@ -349,7 +350,7 @@ def _gs_multi_asset(dfs, capital, maximize):
         try:
             r = run_backtest_multi_asset(
                 initial_capital=capital, lookback=lb,
-                risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET,
+                risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET_ROT,
                 verbose=False, dfs=dfs)
             results.append({'lookback': lb, 'cagr': r['cagr'],
                             'total_return': r['total_return'],
@@ -503,7 +504,7 @@ def run_comparison_ml(train_years: int = TRAIN_YEARS,
     print('  Dual Momentum...')
     r6 = run_backtest_dual_momentum(
         ticker=MAIN_TICKER, initial_capital=initial_capital, verbose=False,
-        dfs=test_multi, risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET, **p6)
+        dfs=test_multi, risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET_ROT, **p6)
 
     print('  VIX Regime...')
     r7 = run_backtest_vix_regime(
@@ -517,7 +518,7 @@ def run_comparison_ml(train_years: int = TRAIN_YEARS,
     print('  Multi-Asset Rotation...')
     r9 = run_backtest_multi_asset(
         initial_capital=initial_capital, verbose=False,
-        dfs=test_multi, risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET, **p9)
+        dfs=test_multi, risky_assets=RISKY_ASSETS, safe_asset=SAFE_ASSET_ROT, **p9)
 
     r_bh    = _buy_and_hold_result(test_df, initial_capital)
     results = [r_bh, r0, r1, r2, r3, r4, r5, r5c, r6, r7, r8, r9]
@@ -633,7 +634,7 @@ def _save_summary_txt_ml(results, names, best_params, ts, train_df, test_df):
         f'  ({len(train_df)} trading days)',
         f'Test       : {test_df.index[0].date()} – {test_df.index[-1].date()}'
         f'  ({len(test_df)} trading days)',
-        f'Rotation   : {", ".join(list(RISKY_ASSETS) + [SAFE_ASSET])}',
+        f'Rotation   : {", ".join(list(RISKY_ASSETS))} + CASH (DualMom/MultiAsset) / {SAFE_ASSET} (SMACross/ATR-SMA)',
         '',
         '--- Best parameters found on TRAIN data ---',
         *param_lines,

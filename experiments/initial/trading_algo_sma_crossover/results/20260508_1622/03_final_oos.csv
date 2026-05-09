@@ -1,0 +1,5 @@
+Strategy,Params,CAGR,MaxDD,Trades,WinRate,AvgRet,MaxGain,MaxDrop
+Buy&Hold,—,0.24484893820719256,-0.2690969886811308,0,,,,
+SMACross,"{'sma_window': 30, 'band_pct': 0.01}",0.279,-0.173,24,0.5,0.031,0.209,-0.069
+ATR-SMA,"{'sma_window': 30, 'atr_window': 10, 'atr_multiplier': 0.3}",0.312,-0.145,32,0.5,0.026,0.215,-0.043
+ATR-SMA-C,"{'sma_window': 15, 'atr_window': 14, 'atr_multiplier': 0.3}",0.252,-0.128,50,0.54,0.013,0.15,-0.059

@@ -1,0 +1,16 @@
+label,train_end,test_start,test_end,strategy,best_params,cagr,max_dd,trades,win_rate,avg_ret
+WF1 — 2020 (COVID crash),2020-03-20,2020-03-23,2021-03-22,SMACross,"{'sma_window': 25, 'band_pct': 0.01}",0.235,-0.123,8,0.5,0.028
+WF1 — 2020 (COVID crash),2020-03-20,2020-03-23,2021-03-22,ATR-SMA,"{'sma_window': 25, 'atr_window': 30, 'atr_multiplier': 0.5}",0.208,-0.123,8,0.5,0.025
+WF1 — 2020 (COVID crash),2020-03-20,2020-03-23,2021-03-22,ATR-SMA-C,"{'sma_window': 25, 'atr_window': 30, 'atr_multiplier': 0.5}",0.211,-0.123,8,0.5,0.025
+WF2 — 2021 (Bull market),2021-03-22,2021-03-23,2022-03-22,SMACross,"{'sma_window': 25, 'band_pct': 0.01}",0.436,-0.109,9,0.556,0.042
+WF2 — 2021 (Bull market),2021-03-22,2021-03-23,2022-03-22,ATR-SMA,"{'sma_window': 25, 'atr_window': 30, 'atr_multiplier': 0.5}",0.47,-0.109,8,0.625,0.05
+WF2 — 2021 (Bull market),2021-03-22,2021-03-23,2022-03-22,ATR-SMA-C,"{'sma_window': 25, 'atr_window': 30, 'atr_multiplier': 0.5}",0.476,-0.109,8,0.625,0.05
+WF3 — 2022 (Bear / inflation),2022-03-22,2022-03-23,2023-03-22,SMACross,"{'sma_window': 25, 'band_pct': 0.01}",-0.012,-0.197,15,0.4,-0.0
+WF3 — 2022 (Bear / inflation),2022-03-22,2022-03-23,2023-03-22,ATR-SMA,"{'sma_window': 25, 'atr_window': 20, 'atr_multiplier': 1.5}",0.084,-0.161,3,1.0,0.021
+WF3 — 2022 (Bear / inflation),2022-03-22,2022-03-23,2023-03-22,ATR-SMA-C,"{'sma_window': 25, 'atr_window': 30, 'atr_multiplier': 0.5}",-0.014,-0.202,13,0.385,-0.001
+WF4 — 2023 (Recovery),2023-03-22,2023-03-23,2024-03-22,SMACross,"{'sma_window': 25, 'band_pct': 0.03}",0.179,-0.148,4,0.5,0.004
+WF4 — 2023 (Recovery),2023-03-22,2023-03-23,2024-03-22,ATR-SMA,"{'sma_window': 25, 'atr_window': 20, 'atr_multiplier': 1.5}",0.103,-0.208,6,0.167,-0.01
+WF4 — 2023 (Recovery),2023-03-22,2023-03-23,2024-03-22,ATR-SMA-C,"{'sma_window': 25, 'atr_window': 20, 'atr_multiplier': 1.5}",0.105,-0.208,6,0.167,-0.01
+WF5 — 2024-2026 (Recent bull),2024-03-22,2024-03-25,2025-03-21,SMACross,"{'sma_window': 25, 'band_pct': 0.03}",0.278,-0.124,3,0.667,0.067
+WF5 — 2024-2026 (Recent bull),2024-03-22,2024-03-25,2025-03-21,ATR-SMA,"{'sma_window': 25, 'atr_window': 20, 'atr_multiplier': 1.5}",0.352,-0.082,3,1.0,0.086
+WF5 — 2024-2026 (Recent bull),2024-03-22,2024-03-25,2025-03-21,ATR-SMA-C,"{'sma_window': 25, 'atr_window': 20, 'atr_multiplier': 1.5}",0.356,-0.082,3,1.0,0.086

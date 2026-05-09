@@ -447,5 +447,5 @@ def grid_search(ticker='QQQ', period='5y', initial_capital=10000.0,
 
 
 if __name__ == '__main__':
-    res = run_backtest_sma_crossover(initial_capital=10000.0, sma_window=200, band_pct=0.01)
+    res = run_backtest_sma_crossover(initial_capital=10000.0, sma_window=30, band_pct=0.01)
     print('\nRESULT:', res)
