@@ -1,0 +1,23 @@
+strategy:
+  name: ATR-SMA-C
+  version: "1.0"
+  description: >
+    ATR-band SMA trend-following on EQQQ with trend-strength alt rotation.
+    Exit EQQQ when close drops below SMA ATR band.
+    Rotate into strongest-trending alt asset, or cash when none qualifies.
+
+parameters:
+  sma_window: 15        # SMA lookback in trading days
+  atr_window: 14        # ATR lookback in trading days
+  atr_multiplier: 0.3   # band width = ATR/Close * multiplier
+  cash_rate_annual: 0.02
+
+universe:
+  main_ticker: EQQQ
+  alt_tickers:
+    - IUES
+    - IGLN
+    - IBZL
+    - EEA
+    - IUCS
+  safe_ticker: SEGA     # treated as one of the alts; cash is fallback
