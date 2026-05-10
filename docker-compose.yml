@@ -20,6 +20,8 @@ services:
       - ./logs:/app/logs
     networks:
       - private
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # NO exposed ports — unreachable from the internet
 
   # ── Monitoring Dashboard ───────────────────────────────────────────────────
@@ -48,6 +50,3 @@ volumes:
 networks:
   private:
     driver: bridge
-
-extra_hosts:
-  - "host.docker.internal:host-gateway"
