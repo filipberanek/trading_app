@@ -20,4 +20,39 @@ universe:
     - IBZL
     - EEA
     - IUCS
-  safe_ticker: SEGA     # treated as one of the alts; cash is fallback
+  safe_ticker: SEGA     # treated as one of the alts; cash is the final fallback
+
+# IBKR contract specifications per ticker.
+# Verify these with IBKR Symbol Lookup (https://www.interactivebrokers.com/en/trading/symbol-search.php)
+# sec_type: ETF for exchange-traded funds, STK for stocks
+# exchange:  LSE (London), AEB (Amsterdam), IBIS (Xetra), SMART (auto-route)
+# currency:  Currency of the specific share class you hold
+contracts:
+  EQQQ:
+    sec_type: ETF
+    exchange: LSE
+    currency: USD
+  IUES:
+    sec_type: ETF
+    exchange: LSE
+    currency: USD
+  IGLN:
+    sec_type: ETF
+    exchange: LSE
+    currency: USD
+  IBZL:
+    sec_type: ETF
+    exchange: LSE
+    currency: USD
+  EEA:
+    sec_type: ETF
+    exchange: LSE
+    currency: USD
+  IUCS:
+    sec_type: ETF
+    exchange: LSE
+    currency: USD
+  SEGA:
+    sec_type: ETF
+    exchange: AEB
+    currency: EUR

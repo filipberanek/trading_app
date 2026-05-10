@@ -17,21 +17,76 @@ trading-bot/
 ├── src/
 │   ├── brokers/        # Připojení k brokerům (IBKR)
 │   ├── strategies/     # Obchodní strategie
+│   ├── engine/         # Produkční smyčka (runner, scheduler, state_writer)
 │   ├── data/           # Zpracování tržních dat
 │   └── utils/          # Sdílené utility
 ├── tests/              # Testy (zrcadlí strukturu src/)
-├── experiment/         # Experimenty různých strategií, které ještě nejsou v produkci
+├── experiments/        # Experimenty strategií (není v produkci)
 ├── config/             # Konfigurace (NIKDY necommituj .env!)
 ├── logs/               # Logy (gitignored)
-├── dashboard.py        # Streamlit dashboard
+├── dashboard.py        # Streamlit dashboard (pouze čte z DB)
 └── main.py             # Entry point
 ```
+
+---
+
+## Produkční architektura (Hetzner)
+
+Systém je rozdělen do dvou striktně oddělených částí. **Nikdy je nemíchej.**
+
+```
+INTERNET
+   │
+   ▼
+┌──────────────────────────────────┐
+│          Hetzner Server          │
+│                                  │
+│  [Trading Engine]  private net   │
+│   - ib_insync + strategie        │──► IBKR (pouze outbound)
+│   - IBKR credentials (.env)      │
+│   - žádný exposed port           │
+│        │ write only              │
+│  [PostgreSQL]      private net   │
+│   - user: trader (rw)            │
+│   - user: viewer (ro)            │
+│        │ read only               │
+│  [Frontend]     private+public   │
+│   - Streamlit dashboard          │──► 443 → prohlížeč
+│   - pouze read-only DB přístup   │
+│   - ŽÁDNÉ IBKR credentials       │
+└──────────────────────────────────┘
+```
+
+### Klíčová bezpečnostní pravidla
+- Trading Engine nemá žádný inbound port — ani SSH z internetu
+- Frontend **nikdy** nesmí obsahovat IBKR credentials ani přímé spojení na IBKR
+- DB má dva uživatele: `trader` (INSERT/UPDATE/SELECT) a `viewer` (SELECT only)
+- Všechny credentials pouze v `.env`, nikdy v kódu ani v gitu
+- Tok dat je jednosměrný: Trading Engine → DB → Frontend
+
+### Produkční stack
+- **Orchestrace:** Docker Compose + systemd (restart při pádu / bootu)
+- **IBKR:** IB Gateway (headless, pro servery) — ne TWS
+- **DB:** PostgreSQL (produkce), SQLite pouze lokálně při vývoji
+- **Hlavní smyčka:** `src/engine/runner.py` — spouští se v tržní hodiny, zapisuje heartbeat
+
+### Klíčové DB tabulky
+```
+positions   – aktuální pozice (symbol, qty, avg_price)
+trades      – každý vykonaný obchod
+portfolio   – denní snapshot (date, cash, equity, total)
+heartbeat   – timestamp posledního běhu (monitoring živosti)
+signals     – vygenerované signály
+```
+
+---
 
 ## Stack
 - **Python** 3.12+
 - **Broker API:** ib_insync
-- **Dashboard:** Streamlit + Plotly
+- **Dashboard:** Streamlit + Plotly (read-only, čte z DB)
 - **Databáze:** SQLite (vývoj), PostgreSQL (produkce)
+- **Kontejnerizace:** Docker Compose
 - **Testy:** pytest
 - **Linting:** flake8, black
 

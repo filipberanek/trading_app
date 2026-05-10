@@ -1,6 +1,9 @@
 # Broker API
 ib_insync==0.9.86
 
+# HTTP (Telegram notifications)
+requests==2.32.3
+
 # Data processing
 pandas==2.2.2
 numpy==1.26.4
@@ -9,8 +12,9 @@ numpy==1.26.4
 streamlit==1.35.0
 plotly==5.22.0
 
-# Database
-sqlalchemy==2.0.30
+# API
+fastapi==0.111.0
+uvicorn==0.29.0
 
 # Configuration
 python-dotenv==1.0.1
@@ -24,6 +28,3 @@ pytest-asyncio==0.23.7
 # Code quality
 black==24.4.2
 flake8==7.1.0
-
-# Utilities
-loguru==0.7.2

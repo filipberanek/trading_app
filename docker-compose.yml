@@ -1,0 +1,50 @@
+version: "3.8"
+
+# ── Network isolation ──────────────────────────────────────────────────────────
+# trading:   private only  — zero inbound ports; connects to IBKR outbound
+# dashboard: private + public — serves Streamlit on 8501
+# Both share the same SQLite file via the `trading_data` volume.
+# The trading container has READ-WRITE access; the dashboard is READ-ONLY.
+
+services:
+
+  # ── Trading Engine ─────────────────────────────────────────────────────────
+  trading:
+    build: .
+    container_name: trading_engine
+    restart: unless-stopped
+    env_file: .env
+    command: python main.py --mode paper
+    volumes:
+      - trading_data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - private
+    # NO exposed ports — unreachable from the internet
+
+  # ── Monitoring Dashboard ───────────────────────────────────────────────────
+  dashboard:
+    build: .
+    container_name: trading_dashboard
+    restart: unless-stopped
+    env_file: .env.dashboard
+    command: >
+      streamlit run dashboard.py
+      --server.port=8501
+      --server.address=0.0.0.0
+      --server.headless=true
+    volumes:
+      - trading_data:/app/data:ro    # read-only — dashboard cannot write to DB
+    ports:
+      - "8501:8501"
+    networks:
+      - private
+    depends_on:
+      - trading
+
+volumes:
+  trading_data:
+
+networks:
+  private:
+    driver: bridge

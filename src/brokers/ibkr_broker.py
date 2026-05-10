@@ -28,6 +28,11 @@ class IBKRBroker(BaseBroker):
         super().__init__(host, port, client_id)
         self._ib = IB()
 
+    @property
+    def ib(self) -> IB:
+        """Expose raw IB instance for DataFetcher and advanced use."""
+        return self._ib
+
     def connect(self) -> bool:
         """Connect to IB Gateway."""
         try:
