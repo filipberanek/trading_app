@@ -48,3 +48,6 @@ volumes:
 networks:
   private:
     driver: bridge
+
+extra_hosts:
+  - "host.docker.internal:host-gateway"
