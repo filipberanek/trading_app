@@ -23,10 +23,12 @@ class SignalExecutor:
         self,
         broker: BaseBroker,
         strategy: AtrSmaCStrategy,
+        contract_specs: dict,
         dry_run: bool = False,
     ) -> None:
         self._broker = broker
         self._strategy = strategy
+        self._contract_specs = contract_specs
         self._dry_run = dry_run
 
     def execute(
@@ -39,13 +41,14 @@ class SignalExecutor:
             return []
 
         portfolio_value = self._broker.get_account_value()
+        fx_rates = self._broker.get_fx_rates()
         positions: dict[str, Position] = {
             p.symbol: p for p in self._broker.get_positions()
         }
         records: list[dict] = []
 
         for signal in signals:
-            record = self._execute_one(signal, portfolio_value, prices, positions)
+            record = self._execute_one(signal, portfolio_value, fx_rates, prices, positions)
             if record:
                 records.append(record)
                 # Refresh state so subsequent BUYs use updated portfolio value
@@ -60,12 +63,13 @@ class SignalExecutor:
         self,
         signal: Signal,
         portfolio_value: float,
+        fx_rates: dict[str, float],
         prices: dict[str, float],
         positions: dict[str, Position],
     ) -> Optional[dict]:
         if signal.signal_type == SignalType.SELL:
             return self._sell(signal, prices, positions)
-        return self._buy(signal, portfolio_value, prices)
+        return self._buy(signal, portfolio_value, fx_rates, prices)
 
     def _sell(
         self,
@@ -75,41 +79,73 @@ class SignalExecutor:
     ) -> Optional[dict]:
         pos = positions.get(signal.symbol)
         if pos is None or pos.quantity <= 0:
-            logger.warning(
-                "SELL signal for %s but no open position — skipped", signal.symbol
+            raise RuntimeError(
+                f"SELL signal for {signal.symbol} but no open position found — "
+                f"position state is inconsistent, aborting cycle"
             )
-            return None
-
-        price = prices.get(signal.symbol) or pos.market_price
+        if signal.symbol not in prices:
+            raise RuntimeError(
+                f"No price for SELL {signal.symbol} — cannot record trade"
+            )
         order = Order(
             symbol=signal.symbol,
             action=OrderAction.SELL,
             quantity=pos.quantity,
             order_type=OrderType.MARKET,
         )
-        return self._place(order, price, signal)
+        return self._place(order, prices[signal.symbol], signal)
 
     def _buy(
         self,
         signal: Signal,
         portfolio_value: float,
+        fx_rates: dict[str, float],
         prices: dict[str, float],
     ) -> Optional[dict]:
-        price = prices.get(signal.symbol)
-        if not price or price <= 0:
-            logger.error("No valid price for BUY %s — skipped", signal.symbol)
-            return None
+        if signal.symbol not in prices:
+            raise RuntimeError(
+                f"No price available for BUY {signal.symbol} — cannot size position"
+            )
+        price_native = prices[signal.symbol]
+        if price_native <= 0:
+            raise RuntimeError(
+                f"Price for {signal.symbol} is {price_native} — cannot size position"
+            )
+
+        if signal.symbol not in self._contract_specs:
+            raise KeyError(
+                f"No contract spec for '{signal.symbol}' — cannot determine currency for position sizing"
+            )
+        currency = self._contract_specs[signal.symbol]["currency"]
+        if currency not in fx_rates:
+            raise RuntimeError(
+                f"FX rate for {currency} (required for {signal.symbol}) not found in IBKR account data — "
+                f"available rates: {list(fx_rates.keys())}"
+            )
+        fx_rate = fx_rates[currency]
+        price_usd = price_native * fx_rate
 
         pos_size = self._strategy.calculate_position_size(
-            signal, portfolio_value, price
+            signal, portfolio_value, price_usd
+        )
+        quantity = int(pos_size.quantity)  # floor — no fractional shares on European ETFs
+        if quantity <= 0:
+            raise RuntimeError(
+                f"Calculated quantity is 0 for BUY {signal.symbol} "
+                f"(portfolio=${portfolio_value:.0f}, price={price_native:.4f} {currency} "
+                f"= ${price_usd:.4f} USD) — aborting cycle"
+            )
+        logger.info(
+            "BUY sizing: %s price=%.4f %s (=%.4f USD, fx=%.4f), portfolio=$%.0f → %d shares",
+            signal.symbol, price_native, currency, price_usd, fx_rate, portfolio_value, quantity,
         )
         order = Order(
             symbol=signal.symbol,
             action=OrderAction.BUY,
-            quantity=pos_size.quantity,
+            quantity=quantity,
             order_type=OrderType.MARKET,
         )
-        return self._place(order, price, signal)
+        return self._place(order, price_native, signal)
 
     def _place(
         self, order: Order, price: float, signal: Signal
@@ -129,8 +165,9 @@ class SignalExecutor:
 
         order_id = self._broker.place_order(order)
         if order_id is None:
-            logger.error("Order placement failed: %s", order)
-            return None
+            raise RuntimeError(
+                f"Order placement failed for {order} — broker returned no order ID"
+            )
 
         record["order_id"] = order_id
         logger.info("Executed %s  order_id=%s", order, order_id)

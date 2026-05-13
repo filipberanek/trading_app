@@ -31,12 +31,25 @@ class DataFetcher:
 
     def get_ohlcv(self, symbol: str, bars: int = 200) -> Optional[pd.DataFrame]:
         """Return last `bars` daily OHLCV rows for `symbol`, or None on failure."""
-        spec = self._specs.get(symbol, {})
+        if symbol not in self._specs:
+            raise KeyError(
+                f"No contract spec for '{symbol}' — add it to the contracts section in config YAML"
+            )
+        spec = self._specs[symbol]
+        try:
+            sec_type = spec["sec_type"]
+            exchange = spec["exchange"]
+            currency = spec["currency"]
+        except KeyError as exc:
+            raise KeyError(
+                f"Contract spec for '{symbol}' is missing required field {exc} "
+                f"— check config YAML"
+            ) from exc
         contract = Contract(
             symbol=symbol,
-            secType=spec.get("sec_type", "ETF"),
-            exchange=spec.get("exchange", "SMART"),
-            currency=spec.get("currency", "USD"),
+            secType=sec_type,
+            exchange=exchange,
+            currency=currency,
         )
 
         try:
@@ -68,5 +81,9 @@ class DataFetcher:
         df = util.df(raw).rename(columns=_COL_MAP)
         df["date"] = pd.to_datetime(df["date"])
         df = df.set_index("date")[["Open", "High", "Low", "Close", "Volume"]]
+        # LSE ETFs are quoted in pence (GBX); convert to GBP
+        if currency == "GBP":
+            for col in ["Open", "High", "Low", "Close"]:
+                df[col] = df[col] / 100
         logger.debug("Fetched %d bars for %s", len(df), symbol)
         return df.tail(bars)

@@ -153,7 +153,9 @@ class AtrSmaCStrategy(BaseStrategy):
 
     @property
     def _main_ticker(self) -> str:
-        return self.parameters.get("main_ticker", "EQQQ")
+        if "main_ticker" not in self.parameters:
+            raise KeyError("'main_ticker' missing from strategy parameters")
+        return self.parameters["main_ticker"]
 
     @staticmethod
     def _compute_atr(df: pd.DataFrame, window: int) -> pd.Series:

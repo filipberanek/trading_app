@@ -5,7 +5,7 @@ Interactive Brokers broker implementation using ib_insync.
 import logging
 from typing import Optional
 
-from ib_insync import IB, Contract, MarketOrder, LimitOrder, Stock
+from ib_insync import IB, Contract, MarketOrder, LimitOrder
 
 from src.brokers.base_broker import BaseBroker, Order, OrderAction, OrderType, Position
 
@@ -24,9 +24,10 @@ class IBKRBroker(BaseBroker):
             positions = broker.get_positions()
     """
 
-    def __init__(self, host: str, port: int, client_id: int) -> None:
+    def __init__(self, host: str, port: int, client_id: int, contract_specs: dict) -> None:
         super().__init__(host, port, client_id)
         self._ib = IB()
+        self._contract_specs = contract_specs
 
     @property
     def ib(self) -> IB:
@@ -105,23 +106,56 @@ class IBKRBroker(BaseBroker):
             return []
 
     def get_account_value(self) -> float:
-        """Get total net liquidation value of the account."""
-        try:
-            account_values = self._ib.accountValues()
-            for av in account_values:
-                if av.tag == "NetLiquidation" and av.currency == "USD":
-                    value = float(av.value)
-                    logger.debug(f"Account value: ${value:,.2f}")
-                    return value
-            logger.warning("NetLiquidation value not found in account data.")
-            return 0.0
-        except Exception as e:
-            logger.error(f"Failed to retrieve account value: {e}")
-            return 0.0
+        """Get total net liquidation value of the account in USD."""
+        account_values = self._ib.accountValues()
+        for av in account_values:
+            if av.tag == "NetLiquidation" and av.currency == "USD":
+                value = float(av.value)
+                logger.debug(f"Account value: ${value:,.2f}")
+                return value
+        raise RuntimeError(
+            "NetLiquidation (USD) not found in IBKR account data — "
+            "cannot calculate position size"
+        )
+
+    def get_fx_rates(self) -> dict[str, float]:
+        """Return {currency: usd_per_unit} from IBKR account data.
+
+        ExchangeRate tag: how many USD per 1 unit of the given currency.
+        Raises RuntimeError if the IBKR call fails entirely.
+        """
+        rates: dict[str, float] = {"USD": 1.0}
+        account_values = self._ib.accountValues()
+        if not account_values:
+            raise RuntimeError(
+                "IBKR accountValues() returned empty — cannot determine FX rates"
+            )
+        for av in account_values:
+            if av.tag == "ExchangeRate" and av.currency not in ("", "BASE", "USD"):
+                raw = float(av.value)
+                if raw > 0:
+                    rates[av.currency] = raw
+        logger.debug("FX rates: %s", rates)
+        return rates
 
     def _create_contract(self, symbol: str) -> Contract:
-        """Create an IBKR Stock contract for a given symbol."""
-        contract = Stock(symbol, "SMART", "USD")
+        """Create an IBKR contract for a given symbol using configured specs."""
+        if symbol not in self._contract_specs:
+            raise KeyError(
+                f"No contract spec for '{symbol}' — add it to the contracts section in config YAML"
+            )
+        spec = self._contract_specs[symbol]
+        try:
+            contract = Contract(
+                symbol=symbol,
+                secType=spec["sec_type"],
+                exchange=spec["exchange"],
+                currency=spec["currency"],
+            )
+        except KeyError as exc:
+            raise KeyError(
+                f"Contract spec for '{symbol}' is missing required field {exc}"
+            ) from exc
         self._ib.qualifyContracts(contract)
         return contract
 

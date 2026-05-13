@@ -59,9 +59,13 @@ class TradingRunner:
         self._main_ticker: str = cfg["universe"]["main_ticker"]
         self._alt_tickers: list[str] = cfg["universe"]["alt_tickers"]
         self._safe_ticker: Optional[str] = cfg["universe"].get("safe_ticker")
-        self._contract_specs: dict = cfg.get("contracts", {})
+        if "contracts" not in cfg:
+            raise KeyError(
+                "Missing 'contracts' section in config — all tickers must have explicit contract specs"
+            )
+        self._contract_specs: dict = cfg["contracts"]
 
-        self._broker = IBKRBroker(ibkr_host, ibkr_port, ibkr_client_id)
+        self._broker = IBKRBroker(ibkr_host, ibkr_port, ibkr_client_id, self._contract_specs)
         self._db = StateDB(db_path)
         self._notifier = notifier or Notifier()  # no-op if unconfigured
         self._dry_run = dry_run
@@ -226,7 +230,7 @@ class TradingRunner:
         }
 
         # 5. Execute
-        executor = SignalExecutor(self._broker, self._strategy, dry_run=self._dry_run)
+        executor = SignalExecutor(self._broker, self._strategy, self._contract_specs, dry_run=self._dry_run)
         records = executor.execute(signals, prices)
 
         # 6. Persist + notify
