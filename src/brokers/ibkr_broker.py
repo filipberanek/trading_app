@@ -5,6 +5,9 @@ Interactive Brokers broker implementation using ib_insync.
 import logging
 from typing import Optional
 
+import json
+import urllib.request
+
 from ib_insync import IB, Contract, MarketOrder, LimitOrder
 
 from src.brokers.base_broker import BaseBroker, Order, OrderAction, OrderType, Position
@@ -119,45 +122,31 @@ class IBKRBroker(BaseBroker):
         )
 
     def get_fx_rates(self) -> dict[str, float]:
-        """Fetch USD-per-unit exchange rates for all currencies in contract_specs.
+        """Fetch USD-per-unit rates for all currencies used in contract_specs.
 
-        Uses IBKR historical MIDPOINT data (IDEALPRO) — works for both live
-        and paper accounts.  Raises RuntimeError if any required rate fails.
+        Uses ECB daily reference rates via api.frankfurter.app (free, no key).
+        Raises RuntimeError if any required rate cannot be fetched.
         """
         currencies = {spec["currency"] for spec in self._contract_specs.values()}
         rates: dict[str, float] = {"USD": 1.0}
         for currency in sorted(currencies):
             if currency == "USD":
                 continue
-            contract = Contract(
-                symbol=currency,
-                secType="CASH",
-                exchange="IDEALPRO",
-                currency="USD",
-            )
+            url = f"https://api.frankfurter.app/latest?from={currency}&to=USD"
             try:
-                self._ib.qualifyContracts(contract)
+                req = urllib.request.Request(
+                    url, headers={"User-Agent": "trading-bot/1.0"}
+                )
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    data = json.loads(response.read())
+                rates[currency] = float(data["rates"]["USD"])
             except Exception as exc:
                 raise RuntimeError(
-                    f"Cannot qualify FX contract {currency}/USD on IDEALPRO: {exc}"
+                    f"Failed to fetch FX rate for {currency}/USD "
+                    f"from ECB via frankfurter.app: {exc}"
                 ) from exc
-            bars = self._ib.reqHistoricalData(
-                contract,
-                endDateTime="",
-                durationStr="3 D",
-                barSizeSetting="1 day",
-                whatToShow="MIDPOINT",
-                useRTH=False,
-                formatDate=1,
-            )
-            if not bars:
-                raise RuntimeError(
-                    f"No historical FX data returned for {currency}/USD — "
-                    f"check IBKR market data subscriptions"
-                )
-            rates[currency] = float(bars[-1].close)
-            logger.debug("FX rate %s/USD = %.6f", currency, rates[currency])
-        logger.info("FX rates fetched: %s", rates)
+            logger.debug("FX rate %s/USD = %.6f (ECB)", currency, rates[currency])
+        logger.info("FX rates: %s", rates)
         return rates
 
     def _create_contract(self, symbol: str) -> Contract:
