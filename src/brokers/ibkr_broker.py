@@ -119,23 +119,45 @@ class IBKRBroker(BaseBroker):
         )
 
     def get_fx_rates(self) -> dict[str, float]:
-        """Return {currency: usd_per_unit} from IBKR account data.
+        """Fetch USD-per-unit exchange rates for all currencies in contract_specs.
 
-        ExchangeRate tag: how many USD per 1 unit of the given currency.
-        Raises RuntimeError if the IBKR call fails entirely.
+        Uses IBKR historical MIDPOINT data (IDEALPRO) — works for both live
+        and paper accounts.  Raises RuntimeError if any required rate fails.
         """
+        currencies = {spec["currency"] for spec in self._contract_specs.values()}
         rates: dict[str, float] = {"USD": 1.0}
-        account_values = self._ib.accountValues()
-        if not account_values:
-            raise RuntimeError(
-                "IBKR accountValues() returned empty — cannot determine FX rates"
+        for currency in sorted(currencies):
+            if currency == "USD":
+                continue
+            contract = Contract(
+                symbol=currency,
+                secType="CASH",
+                exchange="IDEALPRO",
+                currency="USD",
             )
-        for av in account_values:
-            if av.tag == "ExchangeRate" and av.currency not in ("", "BASE", "USD"):
-                raw = float(av.value)
-                if raw > 0:
-                    rates[av.currency] = raw
-        logger.debug("FX rates: %s", rates)
+            try:
+                self._ib.qualifyContracts(contract)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Cannot qualify FX contract {currency}/USD on IDEALPRO: {exc}"
+                ) from exc
+            bars = self._ib.reqHistoricalData(
+                contract,
+                endDateTime="",
+                durationStr="3 D",
+                barSizeSetting="1 day",
+                whatToShow="MIDPOINT",
+                useRTH=False,
+                formatDate=1,
+            )
+            if not bars:
+                raise RuntimeError(
+                    f"No historical FX data returned for {currency}/USD — "
+                    f"check IBKR market data subscriptions"
+                )
+            rates[currency] = float(bars[-1].close)
+            logger.debug("FX rate %s/USD = %.6f", currency, rates[currency])
+        logger.info("FX rates fetched: %s", rates)
         return rates
 
     def _create_contract(self, symbol: str) -> Contract:
