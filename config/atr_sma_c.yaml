@@ -30,29 +30,29 @@ universe:
 contracts:
   EQQQ:
     sec_type: STK
-    exchange: LSE
-    currency: USD
+    exchange: SMART
+    currency: GBP
   IUES:
     sec_type: STK
-    exchange: LSE
-    currency: USD
+    exchange: SMART
+    currency: GBP
   IGLN:
     sec_type: STK
-    exchange: LSE
-    currency: USD
+    exchange: SMART
+    currency: GBP
   IBZL:
     sec_type: STK
-    exchange: LSE
-    currency: USD
+    exchange: SMART
+    currency: GBP
   EEA:
     sec_type: STK
-    exchange: LSE
-    currency: USD
+    exchange: SMART
+    currency: GBP
   IUCS:
     sec_type: STK
-    exchange: LSE
-    currency: USD
+    exchange: SMART
+    currency: GBP
   SEGA:
     sec_type: STK
-    exchange: AEB
+    exchange: SMART
     currency: EUR
