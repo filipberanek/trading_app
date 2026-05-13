@@ -165,13 +165,13 @@ rsync -av \
   --exclude='__pycache__' \
   --exclude='*.pyc' \
   --exclude='.env' \
-  ./ trader@<IP_SERVERU>:/opt/trading_app/
+  ./ trader@<IP_SERVERU>:/root/trading_app/
 ```
 
 **Ověření na serveru:**
 ```bash
 ssh trader@<IP_SERVERU>
-ls /opt/trading_app/
+ls /root/trading_app/
 ```
 
 Musíš vidět: `src/`, `config/`, `main.py`, `docker-compose.yml`, `Dockerfile` atd.
@@ -184,7 +184,7 @@ Musíš vidět: `src/`, `config/`, `main.py`, `docker-compose.yml`, `Dockerfile`
 
 Na serveru:
 ```bash
-cd /opt/trading_app
+cd /root/trading_app
 cp .env.example .env
 nano .env
 ```
@@ -216,16 +216,16 @@ Uložit: `Ctrl+O`, `Enter`, `Ctrl+X`
 ### 5.2 Nastavit oprávnění
 
 ```bash
-chmod 600 /opt/trading_app/.env
-chown -R trader:trader /opt/trading_app/
-mkdir -p /opt/trading_app/data /opt/trading_app/logs
+chmod 600 /root/trading_app/.env
+chown -R trader:trader /root/trading_app/
+mkdir -p /root/trading_app/data /root/trading_app/logs
 ```
 
 ### 5.3 Ověřit contract specs
 
 Otevřít `config/atr_sma_c.yaml` a zkontrolovat `exchange` + `currency` pro každý ticker:
 ```bash
-nano /opt/trading_app/config/atr_sma_c.yaml
+nano /root/trading_app/config/atr_sma_c.yaml
 ```
 
 Pro ověření správnosti kontraktů použij IBKR Symbol Search:
@@ -240,7 +240,7 @@ IB Gateway je aplikace od IBKR která umožňuje API přístup. Musí být přih
 ### 6.1 Přidat IB Gateway do docker-compose.yml
 
 ```bash
-nano /opt/trading_app/docker-compose.yml
+nano /root/trading_app/docker-compose.yml
 ```
 
 Přidat službu `ibgateway` (zkopírovat přesně):
@@ -274,7 +274,7 @@ volumes:
 ### 6.2 Přidat IBKR credentials do .env
 
 ```bash
-nano /opt/trading_app/.env
+nano /root/trading_app/.env
 ```
 
 Přidat:
@@ -294,7 +294,7 @@ VNC_PASSWORD=<zvolte_heslo_pro_vnc>
 ### 7.1 Build a spuštění
 
 ```bash
-cd /opt/trading_app
+cd /root/trading_app
 docker compose up -d --build
 ```
 
@@ -379,7 +379,7 @@ Requires=docker.service
 [Service]
 Type=simple
 User=trader
-WorkingDirectory=/opt/trading_app
+WorkingDirectory=/root/trading_app
 ExecStart=docker compose up
 ExecStop=docker compose down
 Restart=always
@@ -409,7 +409,7 @@ reboot
 Po restartu (počkej 60 sekund):
 ```bash
 ssh trader@<IP_SERVERU>
-docker compose -f /opt/trading_app/docker-compose.yml ps
+docker compose -f /root/trading_app/docker-compose.yml ps
 ```
 
 Všechny kontejnery musí být `running` bez ručního zásahu.
