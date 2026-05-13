@@ -30,8 +30,8 @@ universe:
 contracts:
   EQQQ:
     sec_type: STK
-    exchange: EBS
-    currency: USD
+    exchange: LSEETF
+    currency: GBP
   IUES:
     sec_type: STK
     exchange: LSEETF
